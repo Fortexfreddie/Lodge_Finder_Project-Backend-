@@ -1,4 +1,6 @@
 <?php
+    date_default_timezone_set('Africa/Lagos');
+    
     $host = 'localhost';
     $user = 'root';
     $password = '';
@@ -23,4 +25,3 @@
 
     // Select the database
     $conn->select_db($database);
-?>

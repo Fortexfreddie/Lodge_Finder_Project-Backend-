@@ -1,5 +1,8 @@
 <?php
+    // CORS Headers
+    require_once '../../middleware/headers.php';
     require_once '../../middleware/rate_limit.php'; // include the limiter
+    header('Content-Type: application/json');
 
     // get the real IP behind a proxy
     $ip = $_SERVER['HTTP_CLIENT_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'];
@@ -7,16 +10,6 @@
     // Rate-limit all methods to 20
     $globalKey = $ip . '_global';
     rateLimit($globalKey, 20, 60); // 20 requests per minute across all endpoints
-
-    header("Access-Control-Allow-Origin: *");
-    header("Access-Control-Allow-Headers: Content-Type");
-    header("Access-Control-Allow-Methods: POST, OPTIONS");
-
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        // Handle preflight request
-        http_response_code(200); // OK
-        exit();
-    }
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         http_response_code(405); // Method Not Allowed
@@ -57,6 +50,19 @@
                 exit();
             }
 
+            if (!preg_match('/^[0-9]{11}$/', $phone)) {
+                http_response_code(400); // Bad Request
+                echo json_encode(["status" => "error", "message" => "Invalid phonenumber"]);
+                exit;
+            }
+
+            // Check if password is less than 6 characters
+            if (strlen($password) < 6) {
+                http_response_code(400); // Bad Request
+                echo json_encode(["status" => "error", "message" => "Password must be at least 6 characters"]);
+                exit;
+            }
+
             if ($password !== $confirmPassword) {
                 http_response_code(400); // Bad Request
                 $response['status'] = "error";
@@ -71,7 +77,7 @@
             $stmt->execute();
             $result = $stmt->get_result();
 
-            if ($result->num_rows > 0) {
+            if ($result->num_rows === 1) {
                 $stmt->close();
                 http_response_code(409); // Conflict
                 $response['status'] = "error";
@@ -115,4 +121,3 @@
     }
 
     $conn->close();
-?>
